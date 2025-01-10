@@ -7,7 +7,8 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
-import java.util.concurrent.atomic.AtomicInteger
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import javax.imageio.ImageIO
 import javax.swing.JFrame
 import javax.swing.JPanel
@@ -17,7 +18,7 @@ import kotlin.concurrent.timer
 import kotlin.math.abs
 import kotlin.random.Random
 
-class Robot : JPanel() {
+object Robot : JPanel() {
     private val window = JFrame()
     private val keyboardHandler = KeyBoardHandler()
     private val frames: Map<String, List<BufferedImage>> = loadSprites(Action.entries.toTypedArray())
@@ -33,7 +34,7 @@ class Robot : JPanel() {
     private var bubbleFrameNum = 0
     private var bubbleSteps = 0
 
-    private val animationSteps = AtomicInteger(0)
+    private var animationSteps = 0
 
     init {
         window.type = Window.Type.UTILITY
@@ -89,14 +90,17 @@ class Robot : JPanel() {
                 tryWander(true)
             window.repaint()
         })
-        timer(initialDelay = 6000L, period = 6000L, action = { tryWander(false) })
+
+        if (isDayTime())
+            timer(initialDelay = 6000L, period = 6000L, action = { tryWander(false) })
+        else
+            timer(initialDelay = 30000L, period = 30000L, action = { tryWander(false) })
     }
 
     override fun paintComponent(g: Graphics?) {
+        super.paintComponent(g)
         var cImg = currFrames?.get(frameNum)
-        if ((action == LAYING
-                    || action == RISING
-                    || action == SLEEP)
+        if ((action == LAYING || action == RISING || action == SLEEP)
             && layingDir == Direction.LEFT
             || action == CURLED
             && layingDir == Direction.RIGHT
@@ -118,7 +122,6 @@ class Robot : JPanel() {
             g?.drawImage(currImg, x, y, 30, 30, null)
         }
     }
-
 
     private fun tryWander(force: Boolean) {
         if (!force && Random.nextBoolean()) return
@@ -144,7 +147,8 @@ class Robot : JPanel() {
                 this[action.name] = list
                 val folderName = action.name.lowercase()
                 for (i in 1..action.frameRate) {
-                    val inputStream = javaClass.getResourceAsStream("/$folderName/${folderName}_$i.png")
+                    requireNotNull(javaClass.classLoader.getResourceAsStream("$folderName/${folderName}_$i.png"))
+                    val inputStream = javaClass.classLoader.getResourceAsStream("$folderName/${folderName}_$i.png")
                     list.add(ImageIO.read(inputStream))
                 }
             }
@@ -155,21 +159,23 @@ class Robot : JPanel() {
 
     private fun flipImage(img: BufferedImage): BufferedImage {
         val mirror = BufferedImage(img.width, img.height, BufferedImage.TYPE_INT_ARGB)
-        val g2d = mirror.createGraphics()
+        val gTwoD = mirror.createGraphics()
 
-        g2d.transform(AffineTransform().apply {
+        gTwoD.transform(AffineTransform().apply {
             concatenate(AffineTransform.getScaleInstance(-1.0, 1.0))
             concatenate(AffineTransform.getTranslateInstance(-img.width.toDouble(), 0.0))
         })
-        g2d.drawImage(img, 0, 0, null)
-        g2d.dispose()
+        gTwoD.drawImage(img, 0, 0, null)
+        gTwoD.dispose()
 
         return mirror
     }
 
     private fun isMoveKeyPressed(): Boolean =
-        keyboardHandler.isPressed(KeyEvent.VK_UP) || keyboardHandler.isPressed(KeyEvent.VK_DOWN)
-                || keyboardHandler.isPressed(KeyEvent.VK_LEFT) || keyboardHandler.isPressed(KeyEvent.VK_RIGHT)
+        keyboardHandler.isPressed(KeyEvent.VK_UP)
+                || keyboardHandler.isPressed(KeyEvent.VK_DOWN)
+                || keyboardHandler.isPressed(KeyEvent.VK_LEFT)
+                || keyboardHandler.isPressed(KeyEvent.VK_RIGHT)
 
     private fun updateAction() {
         if (action != RISING) {
@@ -208,7 +214,7 @@ class Robot : JPanel() {
         }
     }
 
-    fun changeAction(act: Action): Boolean {
+    private fun changeAction(act: Action): Boolean {
         if (act != action) {
             action = act
             currFrames = frames[action.name]!!
@@ -237,23 +243,23 @@ class Robot : JPanel() {
     }
 
     private fun updateAnimation() {
-        animationSteps.getAndUpdate { i -> i + 1 }
-        if (animationSteps.get() >= action.delay) {
+        animationSteps++
+        if (animationSteps >= action.delay) {
             if (action == LAYING && frameNum == action.frameRate - 1) {
-                if ((animationSteps.get() - action.delay) > 40) {
+                if ((animationSteps - action.delay) > 40) {
 
-                    animationSteps.set(0)
+                    animationSteps = 0
                     frameNum = 0
                     if (Random.nextBoolean()) changeAction(CURLED)
                     else changeAction(SLEEP)
                 }
             } else if (action == SITTING && frameNum == action.frameRate - 1) {
                 changeAction(LICKING)
-                animationSteps.set(0)
+                animationSteps = 0
                 frameNum = 0
             } else {
                 frameNum++
-                animationSteps.set(0)
+                animationSteps = 0
             }
         }
         if (frameNum >= action.frameRate) frameNum = 0
@@ -278,4 +284,9 @@ class Robot : JPanel() {
                 bubbleState = BubbleState.NONE
         }
     }
+
+    private fun isDayTime(): Boolean =
+        DateTimeFormatter.ofPattern("hh:mm:ss").format(LocalDateTime.now()).substring(0, 2).toInt() in 7..18
+
+    private fun readResolve(): Any = Robot
 }

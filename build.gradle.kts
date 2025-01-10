@@ -45,3 +45,8 @@ tasks{
         duplicatesStrategy=DuplicatesStrategy.EXCLUDE
     }
 }
+task("copyDependencies", Copy::class) {
+    configurations.compileClasspath.get()
+        .filter { it.extension == "jar" }
+        .forEach { from(it.absolutePath).into("${layout.buildDirectory.get()}/libs") }
+}
