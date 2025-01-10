@@ -135,7 +135,7 @@ object Robot : JPanel() {
                     Random.nextInt(it.height - window.height - 20) + 10
                 )
             }
-        } while (xyWithinThreshold(screenLoc, loc, 400))
+        } while (xyWithinThreshold(screenLoc, loc))
         wanderLoc = loc
     }
 
@@ -147,15 +147,15 @@ object Robot : JPanel() {
                 this[action.name] = list
                 val folderName = action.name.lowercase()
                 for (i in 1..action.frameRate) {
-                    requireNotNull(javaClass.classLoader.getResourceAsStream("$folderName/${folderName}_$i.png"))
-                    val inputStream = javaClass.classLoader.getResourceAsStream("$folderName/${folderName}_$i.png")
+                    requireNotNull(javaClass.classLoader.getResourceAsStream("grey_tabby_cat/$folderName/${folderName}_$i.png"))
+                    val inputStream = javaClass.classLoader.getResourceAsStream("grey_tabby_cat/$folderName/${folderName}_$i.png")
                     list.add(ImageIO.read(inputStream))
                 }
             }
         }
 
-    private fun xyWithinThreshold(px: Point, py: Point, threshold: Int) =
-        abs(px.y - py.y) <= threshold && abs(px.x - py.x) <= threshold
+    private fun xyWithinThreshold(px: Point, py: Point) =
+        abs(px.y - py.y) <= 400 && abs(px.x - py.x) <= 400
 
     private fun flipImage(img: BufferedImage): BufferedImage {
         val mirror = BufferedImage(img.width, img.height, BufferedImage.TYPE_INT_ARGB)
