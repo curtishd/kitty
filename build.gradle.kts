@@ -29,3 +29,19 @@ tasks.jar {
     })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+tasks{
+    compileJava{
+        dependsOn(compileKotlin)
+        doFirst{
+            options.compilerArgs= listOf(
+                "--module-path",classpath.asPath
+            )
+        }
+    }
+    compileKotlin {
+        destinationDirectory.set(compileJava.get().destinationDirectory)
+    }
+    jar{
+        duplicatesStrategy=DuplicatesStrategy.EXCLUDE
+    }
+}

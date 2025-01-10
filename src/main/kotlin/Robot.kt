@@ -17,48 +17,43 @@ import kotlin.concurrent.timer
 import kotlin.math.abs
 import kotlin.random.Random
 
-
-enum class State { DEFAULT, WANDER }
-enum class Direction { RIGHT, LEFT }
-
 class Robot : JPanel() {
+    private val window = JFrame()
+    private val keyboardHandler = KeyBoardHandler()
     private val frames: Map<String, List<BufferedImage>> = loadSprites(Action.entries.toTypedArray())
     private val bubbleFrames: Map<String, List<BufferedImage>> = loadSprites(BubbleState.entries.toTypedArray())
-    val window: JFrame = JFrame()
-    private val keyboardHandler: KeyBoardHandler = KeyBoardHandler()
-    var frameNum = 0
-    var action: Action = SLEEP
-    private lateinit var currFrames: List<BufferedImage>
+    private var frameNum = 0
+    private var action: Action = SLEEP
+    private var currFrames: List<BufferedImage>? = null
     private var layingDir = Direction.RIGHT
     private var state = State.DEFAULT
     private var wanderLoc = Point(0, 0)
-    var bubbleState = BubbleState.NONE
-    private lateinit var currBubbleFrames: List<BufferedImage>
+    private var bubbleState = BubbleState.NONE
+    private var currBubbleFrames: List<BufferedImage>? = null
     private var bubbleFrameNum = 0
-    private var bubbleStep = 0
+    private var bubbleSteps = 0
 
-    private var animationSteps = AtomicInteger(0)
+    private val animationSteps = AtomicInteger(0)
 
     init {
-        isOpaque = false
+        window.type = Window.Type.UTILITY
         window.defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
         window.isUndecorated = true
-        window.type = Window.Type.UTILITY
         val dim = Dimension(100, 100)
         window.preferredSize = dim
         window.minimumSize = dim
         window.setLocationRelativeTo(null)
         window.isAlwaysOnTop = true
-        window.isVisible = true
+        isOpaque = false
         window.addMouseMotionListener(object : MouseAdapter() {
             override fun mouseDragged(e: MouseEvent?) {
-                EventQueue.invokeLater {
+                SwingUtilities.invokeLater {
                     window.setLocation(
-                        e!!.locationOnScreen.x - window.width / 2, e.locationOnScreen.y - window.height / 2
+                        e!!.locationOnScreen.x - window.width / 2,
+                        e.locationOnScreen.y - window.height / 2
                     )
-                    if (changeAction(RISING)) {
+                    if (changeAction(RISING))
                         frameNum = 0
-                    }
                 }
             }
         })
@@ -80,35 +75,36 @@ class Robot : JPanel() {
             }
         })
         window.add(this)
-        window.background = Color(1.0f, 1.0f, 1.0f, 1.0f)
+        window.background = Color(1.0f, 1.0f, 1.0f, 0.0f)
+        window.isVisible = true
+
         changeAction(CURLED)
+
         timer(initialDelay = 10L, period = 10L, action = {
             updateAction()
             doAction()
             updateAnimation()
-            manageBubble()
-            if (keyboardHandler.isPressed(KeyEvent.VK_W)) tryWander(true)
+            stateOfBubble()
+            if (keyboardHandler.isPressed(KeyEvent.VK_W))
+                tryWander(true)
             window.repaint()
         })
         timer(initialDelay = 6000L, period = 6000L, action = { tryWander(false) })
     }
 
-    companion object {
-        @JvmStatic
-        fun main(args: Array<String>) {
-            Robot()
-        }
-    }
-
     override fun paintComponent(g: Graphics?) {
-        super.paintComponent(g)
-        if ((action == LAYING || action == RISING || action == SLEEP) && layingDir == Direction.LEFT || action == CURLED && layingDir == Direction.RIGHT) {
-            var currImg = currFrames[frameNum]
-            currImg = flipImage(currImg)
-            g?.drawImage(currImg, 0, 0, 100, 100, null)
-        }
+        var cImg = currFrames?.get(frameNum)
+        if ((action == LAYING
+                    || action == RISING
+                    || action == SLEEP)
+            && layingDir == Direction.LEFT
+            || action == CURLED
+            && layingDir == Direction.RIGHT
+        )
+            cImg = cImg?.let { flipImage(it) }
+        g?.drawImage(cImg, 0, 0, 100, 100, null)
         if (bubbleState != BubbleState.NONE) {
-            val currImg = currBubbleFrames[bubbleFrameNum]
+            val currImg = currBubbleFrames?.get(bubbleFrameNum)
             var x = 30
             var y = 40
             when (action) {
@@ -140,42 +136,40 @@ class Robot : JPanel() {
         wanderLoc = loc
     }
 
-    private fun <T> loadSprites(entries: Array<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation {
-        val map = HashMap<String, List<BufferedImage>>()
-        for (action in entries) {
-            if (action.frameRate <= 0) continue
-            val list = arrayListOf<BufferedImage>()
-            map[action.name] = list
-            val folderName = action.name.lowercase()
-            for (i in 1..action.frameRate) {
-                val inputStream = javaClass.getResourceAsStream("/$folderName/${folderName}_$i.png")
-                val resources = ImageIO.read(inputStream)
-                list.add(resources)
+    private fun <T> loadSprites(entries: Array<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation =
+        buildMap {
+            for (action in entries) {
+                if (action.frameRate <= 0) continue
+                val list = arrayListOf<BufferedImage>()
+                this[action.name] = list
+                val folderName = action.name.lowercase()
+                for (i in 1..action.frameRate) {
+                    val inputStream = javaClass.getResourceAsStream("/$folderName/${folderName}_$i.png")
+                    list.add(ImageIO.read(inputStream))
+                }
             }
         }
-        return map
-    }
 
     private fun xyWithinThreshold(px: Point, py: Point, threshold: Int) =
         abs(px.y - py.y) <= threshold && abs(px.x - py.x) <= threshold
 
     private fun flipImage(img: BufferedImage): BufferedImage {
         val mirror = BufferedImage(img.width, img.height, BufferedImage.TYPE_INT_ARGB)
-        val graph = mirror.createGraphics()
-        val at = AffineTransform().apply {
+        val g2d = mirror.createGraphics()
+
+        g2d.transform(AffineTransform().apply {
             concatenate(AffineTransform.getScaleInstance(-1.0, 1.0))
             concatenate(AffineTransform.getTranslateInstance(-img.width.toDouble(), 0.0))
-        }
-        graph.transform(at)
-        graph.drawImage(img, 0, 0, null)
-        graph.dispose()
+        })
+        g2d.drawImage(img, 0, 0, null)
+        g2d.dispose()
+
         return mirror
     }
 
     private fun isMoveKeyPressed(): Boolean =
-        keyboardHandler.isPressed(KeyEvent.VK_UP) || keyboardHandler.isPressed(KeyEvent.VK_DOWN) || keyboardHandler.isPressed(
-            KeyEvent.VK_LEFT
-        ) || keyboardHandler.isPressed(KeyEvent.VK_RIGHT)
+        keyboardHandler.isPressed(KeyEvent.VK_UP) || keyboardHandler.isPressed(KeyEvent.VK_DOWN)
+                || keyboardHandler.isPressed(KeyEvent.VK_LEFT) || keyboardHandler.isPressed(KeyEvent.VK_RIGHT)
 
     private fun updateAction() {
         if (action != RISING) {
@@ -265,21 +259,23 @@ class Robot : JPanel() {
         if (frameNum >= action.frameRate) frameNum = 0
     }
 
-    private fun manageBubble() {
+    private fun stateOfBubble() {
         if (bubbleState != BubbleState.HEART) {
             if (action == SLEEP || action == CURLED) {
                 bubbleState = BubbleState.ZZZ
-            } else if (action != LICKING && action != SITTING) bubbleState = BubbleState.NONE
+            } else if (action != LICKING && action != SITTING)
+                bubbleState = BubbleState.NONE
         }
-        bubbleStep++
+        bubbleSteps++
         currBubbleFrames = bubbleFrames.getOrDefault(bubbleState.name, bubbleFrames[BubbleState.HEART.name])!!
-        if (bubbleStep >= bubbleState.delay) {
+        if (bubbleSteps >= bubbleState.delay) {
             bubbleFrameNum++
-            bubbleStep = 0
+            bubbleSteps = 0
         }
         if (bubbleFrameNum >= bubbleState.frameRate) {
             bubbleFrameNum = 0
-            if (bubbleState == BubbleState.HEART) bubbleState = BubbleState.NONE
+            if (bubbleState == BubbleState.HEART)
+                bubbleState = BubbleState.NONE
         }
     }
 }

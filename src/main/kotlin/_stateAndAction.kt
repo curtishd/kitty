@@ -1,6 +1,5 @@
 package me.cdh
 
-
 internal interface Animation {
     val delay: Int
     val frameRate: Int
@@ -25,3 +24,5 @@ enum class Action(override val frameRate: Int, override val delay: Int) : Animat
     RISING(2, 40),
     SLEEP(1, 10),
 }
+enum class State { DEFAULT, WANDER }
+enum class Direction { RIGHT, LEFT }
