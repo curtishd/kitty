@@ -33,7 +33,6 @@ object Robot : JPanel() {
     private var currBubbleFrames: List<BufferedImage>? = null
     private var bubbleFrameNum = 0
     private var bubbleSteps = 0
-
     private var animationSteps = 0
 
     init {
@@ -141,15 +140,22 @@ object Robot : JPanel() {
 
     private fun <T> loadSprites(entries: Array<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation =
         buildMap {
+            val catVarious: String =
+                when (Random.nextInt(0, 3)) {
+                    0 -> "calico_cat"
+                    1 -> "grey_tabby_cat"
+                    2 -> "orange_cat"
+                    else -> throw IllegalArgumentException()
+                }
             for (action in entries) {
                 if (action.frameRate <= 0) continue
                 val list = arrayListOf<BufferedImage>()
                 this[action.name] = list
                 val folderName = action.name.lowercase()
                 for (i in 1..action.frameRate) {
-                    requireNotNull(javaClass.classLoader.getResourceAsStream("grey_tabby_cat/$folderName/${folderName}_$i.png"))
-                    val inputStream = javaClass.classLoader.getResourceAsStream("grey_tabby_cat/$folderName/${folderName}_$i.png")
-                    list.add(ImageIO.read(inputStream))
+                    val inp = javaClass.classLoader.getResourceAsStream("$catVarious/$folderName/${folderName}_$i.png")
+                    requireNotNull(inp)
+                    list.add(ImageIO.read(inp))
                 }
             }
         }

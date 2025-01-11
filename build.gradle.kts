@@ -1,3 +1,7 @@
+import org.gradle.internal.declarativedsl.parsing.main
+import org.jetbrains.kotlin.ir.backend.js.compile
+import org.jetbrains.kotlin.konan.target.buildDistribution
+
 plugins {
     kotlin("jvm") version "2.0.21"
 }
@@ -22,27 +26,28 @@ kotlin {
 tasks.jar {
     manifest {
         attributes(
-            mapOf("Main-Class" to "me.cdh.MainKt"))
+            mapOf("Main-Class" to "me.cdh.MainKt")
+        )
     }
     from(configurations.runtimeClasspath.get().map {
         if (it.isDirectory) it else zipTree(it)
     })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
-tasks{
-    compileJava{
+tasks {
+    compileJava {
         dependsOn(compileKotlin)
-        doFirst{
-            options.compilerArgs= listOf(
-                "--module-path",classpath.asPath
+        doFirst {
+            options.compilerArgs = listOf(
+                "--module-path", classpath.asPath
             )
         }
     }
     compileKotlin {
         destinationDirectory.set(compileJava.get().destinationDirectory)
     }
-    jar{
-        duplicatesStrategy=DuplicatesStrategy.EXCLUDE
+    jar {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     }
 }
 task("copyDependencies", Copy::class) {
