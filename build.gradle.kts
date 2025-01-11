@@ -1,7 +1,3 @@
-import org.gradle.internal.declarativedsl.parsing.main
-import org.jetbrains.kotlin.ir.backend.js.compile
-import org.jetbrains.kotlin.konan.target.buildDistribution
-
 plugins {
     kotlin("jvm") version "2.0.21"
 }

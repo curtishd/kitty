@@ -17,6 +17,7 @@ import javax.swing.WindowConstants
 import kotlin.concurrent.timer
 import kotlin.math.abs
 import kotlin.random.Random
+import kotlin.system.exitProcess
 
 object Robot : JPanel() {
     private val window = JFrame()
@@ -35,6 +36,8 @@ object Robot : JPanel() {
     private var bubbleSteps = 0
     private var animationSteps = 0
 
+    private var catVarious: String? = null
+
     init {
         window.type = Window.Type.UTILITY
         window.defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
@@ -49,11 +52,9 @@ object Robot : JPanel() {
             override fun mouseDragged(e: MouseEvent?) {
                 SwingUtilities.invokeLater {
                     window.setLocation(
-                        e!!.locationOnScreen.x - window.width / 2,
-                        e.locationOnScreen.y - window.height / 2
+                        e!!.locationOnScreen.x - window.width / 2, e.locationOnScreen.y - window.height / 2
                     )
-                    if (changeAction(RISING))
-                        frameNum = 0
+                    if (changeAction(RISING)) frameNum = 0
                 }
             }
         })
@@ -85,26 +86,20 @@ object Robot : JPanel() {
             doAction()
             updateAnimation()
             stateOfBubble()
-            if (keyboardHandler.isPressed(KeyEvent.VK_W))
-                tryWander(true)
+            if (keyboardHandler.isPressed(KeyEvent.VK_W)) tryWander(true)
             window.repaint()
         })
 
-        if (isDayTime())
-            timer(initialDelay = 6000L, period = 6000L, action = { tryWander(false) })
-        else
-            timer(initialDelay = 30000L, period = 30000L, action = { tryWander(false) })
+        if (isDayTime()) timer(initialDelay = 30000L, period = 30000L, action = { tryWander(false) })
+        else timer(initialDelay = 6000L, period = 6000L, action = { tryWander(false) })
+        initSystemTray()
     }
 
     override fun paintComponent(g: Graphics?) {
         super.paintComponent(g)
         var cImg = currFrames?.get(frameNum)
-        if ((action == LAYING || action == RISING || action == SLEEP)
-            && layingDir == Direction.LEFT
-            || action == CURLED
-            && layingDir == Direction.RIGHT
-        )
-            cImg = cImg?.let { flipImage(it) }
+        if ((action == LAYING || action == RISING || action == SLEEP) && layingDir == Direction.LEFT || action == CURLED && layingDir == Direction.RIGHT) cImg =
+            cImg?.let { flipImage(it) }
         g?.drawImage(cImg, 0, 0, 100, 100, null)
         if (bubbleState != BubbleState.NONE) {
             val currImg = currBubbleFrames?.get(bubbleFrameNum)
@@ -140,13 +135,13 @@ object Robot : JPanel() {
 
     private fun <T> loadSprites(entries: Array<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation =
         buildMap {
-            val catVarious: String =
-                when (Random.nextInt(0, 3)) {
-                    0 -> "calico_cat"
-                    1 -> "grey_tabby_cat"
-                    2 -> "orange_cat"
-                    else -> throw IllegalArgumentException()
-                }
+            catVarious = when (Random.nextInt(0, 4)) {
+                0 -> "calico_cat"
+                1 -> "grey_tabby_cat"
+                2 -> "orange_cat"
+                3 -> "white_cat"
+                else -> throw IllegalArgumentException()
+            }
             for (action in entries) {
                 if (action.frameRate <= 0) continue
                 val list = arrayListOf<BufferedImage>()
@@ -160,8 +155,7 @@ object Robot : JPanel() {
             }
         }
 
-    private fun xyWithinThreshold(px: Point, py: Point) =
-        abs(px.y - py.y) <= 400 && abs(px.x - py.x) <= 400
+    private fun xyWithinThreshold(px: Point, py: Point) = abs(px.y - py.y) <= 400 && abs(px.x - py.x) <= 400
 
     private fun flipImage(img: BufferedImage): BufferedImage {
         val mirror = BufferedImage(img.width, img.height, BufferedImage.TYPE_INT_ARGB)
@@ -178,10 +172,9 @@ object Robot : JPanel() {
     }
 
     private fun isMoveKeyPressed(): Boolean =
-        keyboardHandler.isPressed(KeyEvent.VK_UP)
-                || keyboardHandler.isPressed(KeyEvent.VK_DOWN)
-                || keyboardHandler.isPressed(KeyEvent.VK_LEFT)
-                || keyboardHandler.isPressed(KeyEvent.VK_RIGHT)
+        keyboardHandler.isPressed(KeyEvent.VK_UP) || keyboardHandler.isPressed(KeyEvent.VK_DOWN) || keyboardHandler.isPressed(
+            KeyEvent.VK_LEFT
+        ) || keyboardHandler.isPressed(KeyEvent.VK_RIGHT)
 
     private fun updateAction() {
         if (action != RISING) {
@@ -275,8 +268,7 @@ object Robot : JPanel() {
         if (bubbleState != BubbleState.HEART) {
             if (action == SLEEP || action == CURLED) {
                 bubbleState = BubbleState.ZZZ
-            } else if (action != LICKING && action != SITTING)
-                bubbleState = BubbleState.NONE
+            } else if (action != LICKING && action != SITTING) bubbleState = BubbleState.NONE
         }
         bubbleSteps++
         currBubbleFrames = bubbleFrames.getOrDefault(bubbleState.name, bubbleFrames[BubbleState.HEART.name])!!
@@ -286,13 +278,28 @@ object Robot : JPanel() {
         }
         if (bubbleFrameNum >= bubbleState.frameRate) {
             bubbleFrameNum = 0
-            if (bubbleState == BubbleState.HEART)
-                bubbleState = BubbleState.NONE
+            if (bubbleState == BubbleState.HEART) bubbleState = BubbleState.NONE
         }
     }
 
-    private fun isDayTime(): Boolean =
-        DateTimeFormatter.ofPattern("hh:mm:ss").format(LocalDateTime.now()).substring(0, 2).toInt() in 7..18
+    private fun initSystemTray() {
+        if (!SystemTray.isSupported()) return
+        SwingUtilities.invokeLater {
+            val img = ImageIO.read(javaClass.classLoader.getResourceAsStream("orange_cat/head.png"))
+            val trayIconSize = SystemTray.getSystemTray().trayIconSize
+            val trayImg = img.getScaledInstance(trayIconSize.width, trayIconSize.height, Image.SCALE_SMOOTH)
+            val trayIcon = TrayIcon(trayImg, "Kitty")
+            val popupMenu = PopupMenu()
+            val exit = MenuItem("Exit")
+            exit.addActionListener { exitProcess(0) }
+            popupMenu.add(exit)
+            trayIcon.popupMenu = popupMenu
+            SystemTray.getSystemTray().add(trayIcon)
+        }
+    }
 
     private fun readResolve(): Any = Robot
 }
+
+private fun isDayTime(): Boolean =
+    DateTimeFormatter.ofPattern("hh:mm:ss").format(LocalDateTime.now()).substring(0, 2).toInt() in 7..18
