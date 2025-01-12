@@ -2,7 +2,6 @@ package me.cdh
 
 import me.cdh.Action.*
 import java.awt.*
-import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.geom.AffineTransform
@@ -15,15 +14,14 @@ import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import javax.swing.WindowConstants
 import kotlin.concurrent.timer
+import kotlin.enums.EnumEntries
 import kotlin.math.abs
 import kotlin.random.Random
-import kotlin.system.exitProcess
 
 object Robot : JPanel() {
     private val window = JFrame()
-    private val keyboardHandler = KeyBoardHandler()
-    private val frames: Map<String, List<BufferedImage>> = loadSprites(Action.entries.toTypedArray())
-    private val bubbleFrames: Map<String, List<BufferedImage>> = loadSprites(BubbleState.entries.toTypedArray())
+    private val frames: Map<String, List<BufferedImage>> = loadSprites(Action.entries)
+    private val bubbleFrames: Map<String, List<BufferedImage>> = loadSprites(BubbleState.entries)
     private var frameNum = 0
     private var action: Action = SLEEP
     private var currFrames: List<BufferedImage>? = null
@@ -36,9 +34,8 @@ object Robot : JPanel() {
     private var bubbleSteps = 0
     private var animationSteps = 0
 
-    private var catVarious: String? = null
-
     init {
+        initSystemTray()
         window.type = Window.Type.UTILITY
         window.defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
         window.isUndecorated = true
@@ -78,21 +75,17 @@ object Robot : JPanel() {
         window.add(this)
         window.background = Color(1.0f, 1.0f, 1.0f, 0.0f)
         window.isVisible = true
-
         changeAction(CURLED)
-
         timer(initialDelay = 10L, period = 10L, action = {
             updateAction()
             doAction()
             updateAnimation()
             stateOfBubble()
-            if (keyboardHandler.isPressed(KeyEvent.VK_W)) tryWander(true)
             window.repaint()
         })
 
         if (isDayTime()) timer(initialDelay = 30000L, period = 30000L, action = { tryWander(false) })
         else timer(initialDelay = 6000L, period = 6000L, action = { tryWander(false) })
-        initSystemTray()
     }
 
     override fun paintComponent(g: Graphics?) {
@@ -133,9 +126,9 @@ object Robot : JPanel() {
         wanderLoc = loc
     }
 
-    private fun <T> loadSprites(entries: Array<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation =
+    private fun <T> loadSprites(entries: EnumEntries<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation =
         buildMap {
-            catVarious = when (Random.nextInt(0, 4)) {
+            val catVarious = when (Random.nextInt(0, 4)) {
                 0 -> "calico_cat"
                 1 -> "grey_tabby_cat"
                 2 -> "orange_cat"
@@ -144,12 +137,11 @@ object Robot : JPanel() {
             }
             for (action in entries) {
                 if (action.frameRate <= 0) continue
-                val list = arrayListOf<BufferedImage>()
+                val list = mutableListOf<BufferedImage>()
                 this[action.name] = list
                 val folderName = action.name.lowercase()
                 for (i in 1..action.frameRate) {
                     val inp = javaClass.classLoader.getResourceAsStream("$catVarious/$folderName/${folderName}_$i.png")
-                    requireNotNull(inp)
                     list.add(ImageIO.read(inp))
                 }
             }
@@ -159,26 +151,20 @@ object Robot : JPanel() {
 
     private fun flipImage(img: BufferedImage): BufferedImage {
         val mirror = BufferedImage(img.width, img.height, BufferedImage.TYPE_INT_ARGB)
-        val gTwoD = mirror.createGraphics()
-
-        gTwoD.transform(AffineTransform().apply {
-            concatenate(AffineTransform.getScaleInstance(-1.0, 1.0))
-            concatenate(AffineTransform.getTranslateInstance(-img.width.toDouble(), 0.0))
-        })
-        gTwoD.drawImage(img, 0, 0, null)
-        gTwoD.dispose()
-
+        mirror.createGraphics().run {
+            transform(AffineTransform().apply {
+                concatenate(AffineTransform.getScaleInstance(-1.0, 1.0))
+                concatenate(AffineTransform.getTranslateInstance(-img.width.toDouble(), 0.0))
+            })
+            drawImage(img, 0, 0, null)
+            dispose()
+        }
         return mirror
     }
 
-    private fun isMoveKeyPressed(): Boolean =
-        keyboardHandler.isPressed(KeyEvent.VK_UP) || keyboardHandler.isPressed(KeyEvent.VK_DOWN) || keyboardHandler.isPressed(
-            KeyEvent.VK_LEFT
-        ) || keyboardHandler.isPressed(KeyEvent.VK_RIGHT)
-
     private fun updateAction() {
         if (action != RISING) {
-            if (state == State.WANDER && !isMoveKeyPressed()) {
+            if (state == State.WANDER) {
                 val curPos = window.locationOnScreen
                 if (abs(curPos.x - wanderLoc.x) >= 3) {
                     if (curPos.x > wanderLoc.x) changeAction(LEFT)
@@ -191,21 +177,10 @@ object Robot : JPanel() {
             }
             var changed = false
             when {
-                keyboardHandler.isPressed(KeyEvent.VK_UP) -> changed = changeAction(UP)
-                keyboardHandler.isPressed(KeyEvent.VK_DOWN) -> changed = changeAction(DOWN)
-                keyboardHandler.isPressed(KeyEvent.VK_LEFT) -> changed = changeAction(LEFT)
-                keyboardHandler.isPressed(KeyEvent.VK_RIGHT) -> changed = changeAction(RIGHT)
-                (action != CURLED && action != SITTING && action != LICKING && action != RISING && action != SLEEP && action != LAYING) -> {
-                    if (action == LEFT) layingDir = Direction.LEFT
-                    if (action == RIGHT) layingDir = Direction.RIGHT
-                    if (state != State.WANDER) {
-                        changed = if (Random.nextInt(3) >= 1) {
-                            changeAction(LAYING)
-                        } else {
-                            changeAction(SITTING)
-                        }
-                    }
-                }
+                action == LEFT -> layingDir = Direction.LEFT
+                action == RIGHT -> layingDir = Direction.RIGHT
+                action != CURLED && action != SITTING && action != LICKING && action != RISING && action != SLEEP && action != LAYING && state != State.WANDER -> changed =
+                    if (Random.nextInt(3) >= 1) changeAction(LAYING) else changeAction(SITTING)
 
                 else -> {}
             }
@@ -213,13 +188,12 @@ object Robot : JPanel() {
         }
     }
 
-    private fun changeAction(act: Action): Boolean {
-        if (act != action) {
-            action = act
-            currFrames = frames[action.name]!!
-            return true
-        }
-        return false
+    private fun changeAction(act: Action) = if (act != action) {
+        action = act
+        currFrames = frames[action.name]!!
+        true
+    } else {
+        false
     }
 
     private fun doAction() {
@@ -244,21 +218,26 @@ object Robot : JPanel() {
     private fun updateAnimation() {
         animationSteps++
         if (animationSteps >= action.delay) {
-            if (action == LAYING && frameNum == action.frameRate - 1) {
-                if ((animationSteps - action.delay) > 40) {
+            when {
+                action == LAYING && frameNum == action.frameRate - 1 -> {
+                    if ((animationSteps - action.delay) > 40) {
+                        animationSteps = 0
+                        frameNum = 0
+                        if (Random.nextBoolean()) changeAction(CURLED)
+                        else changeAction(SLEEP)
+                    }
+                }
 
+                action == SITTING && frameNum == action.frameRate - 1 -> {
+                    changeAction(LICKING)
                     animationSteps = 0
                     frameNum = 0
-                    if (Random.nextBoolean()) changeAction(CURLED)
-                    else changeAction(SLEEP)
                 }
-            } else if (action == SITTING && frameNum == action.frameRate - 1) {
-                changeAction(LICKING)
-                animationSteps = 0
-                frameNum = 0
-            } else {
-                frameNum++
-                animationSteps = 0
+
+                else -> {
+                    frameNum++
+                    animationSteps = 0
+                }
             }
         }
         if (frameNum >= action.frameRate) frameNum = 0
@@ -266,9 +245,8 @@ object Robot : JPanel() {
 
     private fun stateOfBubble() {
         if (bubbleState != BubbleState.HEART) {
-            if (action == SLEEP || action == CURLED) {
-                bubbleState = BubbleState.ZZZ
-            } else if (action != LICKING && action != SITTING) bubbleState = BubbleState.NONE
+            if (action == SLEEP || action == CURLED) bubbleState = BubbleState.ZZZ
+            else if (action != LICKING && action != SITTING) bubbleState = BubbleState.NONE
         }
         bubbleSteps++
         currBubbleFrames = bubbleFrames.getOrDefault(bubbleState.name, bubbleFrames[BubbleState.HEART.name])!!
@@ -284,16 +262,12 @@ object Robot : JPanel() {
 
     private fun initSystemTray() {
         if (!SystemTray.isSupported()) return
+        val img = ImageIO.read(javaClass.classLoader.getResourceAsStream("icon.png"))
+        val trayIconSize = SystemTray.getSystemTray().trayIconSize
+        val trayImg = img.getScaledInstance(trayIconSize.width, trayIconSize.height, Image.SCALE_SMOOTH)
+        val trayIcon = TrayIcon(trayImg, "Kitty")
+        trayIcon.popupMenu = KittyPopupMenu
         SwingUtilities.invokeLater {
-            val img = ImageIO.read(javaClass.classLoader.getResourceAsStream("orange_cat/head.png"))
-            val trayIconSize = SystemTray.getSystemTray().trayIconSize
-            val trayImg = img.getScaledInstance(trayIconSize.width, trayIconSize.height, Image.SCALE_SMOOTH)
-            val trayIcon = TrayIcon(trayImg, "Kitty")
-            val popupMenu = PopupMenu()
-            val exit = MenuItem("Exit")
-            exit.addActionListener { exitProcess(0) }
-            popupMenu.add(exit)
-            trayIcon.popupMenu = popupMenu
             SystemTray.getSystemTray().add(trayIcon)
         }
     }
@@ -302,4 +276,4 @@ object Robot : JPanel() {
 }
 
 private fun isDayTime(): Boolean =
-    DateTimeFormatter.ofPattern("hh:mm:ss").format(LocalDateTime.now()).substring(0, 2).toInt() in 7..18
+    DateTimeFormatter.ofPattern("HH:mm:ss").format(LocalDateTime.now()).substring(0, 2).toInt() in 7..18
