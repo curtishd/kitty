@@ -3,23 +3,23 @@ package me.cdh
 import me.cdh.Action.*
 import java.awt.Graphics
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import kotlin.concurrent.timer
 
 object Kitty : JPanel() {
 
     init {
-        initSystemTray()
+        SwingUtilities.invokeLater { initSystemTray() }
         isOpaque = false
-        window.add(this)
+        window.isVisible = true
         changeAction(CURLED)
         timer(initialDelay = 10L, period = 10L, action = {
             updateAction()
             doAction()
             updateAnimation()
-            stateOfBubble()
+            bubbleState()
             window.repaint()
         })
-        window.isVisible = true
         if (isDayTime()) timer(initialDelay = 30000L, period = 30000L, action = { tryWander() })
         else timer(initialDelay = 6000L, period = 6000L, action = { tryWander() })
     }
@@ -27,8 +27,8 @@ object Kitty : JPanel() {
     override fun paintComponent(g: Graphics?) {
         super.paintComponent(g)
         var cImg = currFrames?.get(frameNum)
-        if ((action == LAYING || action == RISING || action == SLEEP) && layingDir == Direction.LEFT || action == CURLED && layingDir == Direction.RIGHT) cImg =
-            cImg?.let { flipImage(it) }
+        if ((action == LAYING || action == RISING || action == SLEEP) && layingDir == Direction.LEFT || action == CURLED && layingDir == Direction.RIGHT)
+            cImg = cImg?.let { flipImage(it) }
         g?.drawImage(cImg, 0, 0, 100, 100, null)
         if (bubbleState != BubbleState.NONE) {
             val currImg = currBubbleFrames?.get(bubbleFrameNum)

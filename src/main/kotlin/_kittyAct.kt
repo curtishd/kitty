@@ -10,7 +10,6 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.imageio.ImageIO
 import javax.swing.JFrame
-import javax.swing.SwingUtilities
 import javax.swing.WindowConstants
 import kotlin.enums.EnumEntries
 import kotlin.math.abs
@@ -28,22 +27,18 @@ val window = JFrame().apply {
     isAlwaysOnTop = true
     addMouseMotionListener(object : MouseAdapter() {
         override fun mouseDragged(e: MouseEvent?) {
-            SwingUtilities.invokeLater {
-                setLocation(
-                    e!!.locationOnScreen.x - width / 2, e.locationOnScreen.y - height / 2
-                )
-                if (changeAction(RISING)) frameNum = 0
-            }
+            setLocation(
+                e!!.locationOnScreen.x - width / 2, e.locationOnScreen.y - height / 2
+            )
+            if (changeAction(RISING)) frameNum = 0
         }
     })
     addMouseListener(object : MouseAdapter() {
         override fun mouseReleased(e: MouseEvent?) {
             super.mouseReleased(e)
-            SwingUtilities.invokeLater {
-                if (action == RISING) {
-                    changeAction(LAYING)
-                    frameNum = 1
-                }
+            if (action == RISING) {
+                changeAction(LAYING)
+                frameNum = 1
             }
         }
 
@@ -54,11 +49,12 @@ val window = JFrame().apply {
         }
     })
     background = Color(1.0f, 1.0f, 1.0f, 0.0f)
+    add(Kitty)
 }
-val frames: Map<String, List<BufferedImage>> = loadImg(entries)
-val bubbleFrames: Map<String, List<BufferedImage>> = loadImg(BubbleState.entries)
+val frames = loadImg(entries)
+val bubbleFrames = loadImg(BubbleState.entries)
 var frameNum = 0
-var action: Action = SLEEP
+var action = SLEEP
 var currFrames: List<BufferedImage>? = null
 var layingDir = Direction.RIGHT
 var state = State.DEFAULT
@@ -68,6 +64,7 @@ var currBubbleFrames: List<BufferedImage>? = null
 var bubbleFrameNum = 0
 var bubbleSteps = 0
 var animationSteps = 0
+
 fun <T> loadImg(entries: EnumEntries<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation = buildMap {
     val catVarious = when (Random.nextInt(0, 4)) {
         0 -> "calico_cat"
@@ -77,11 +74,11 @@ fun <T> loadImg(entries: EnumEntries<T>): Map<String, List<BufferedImage>> where
         else -> throw IllegalArgumentException()
     }
     for (action in entries) {
-        if (action.frameRate <= 0) continue
+        if (action.frame <= 0) continue
         val list = mutableListOf<BufferedImage>()
         this[action.name] = list
         val folderName = action.name.lowercase()
-        for (i in 1..action.frameRate) {
+        for (i in 1..action.frame) {
             val inp = javaClass.classLoader.getResourceAsStream("$catVarious/$folderName/${folderName}_$i.png")
             list.add(ImageIO.read(inp))
         }
@@ -94,16 +91,17 @@ fun tryWander() {
     val screenLoc = window.locationOnScreen
     var loc: Point
     do {
-        Toolkit.getDefaultToolkit().screenSize.let {
-            loc = Point(
-                Random.nextInt(it.width - window.width - 20) + 10, Random.nextInt(it.height - window.height - 20) + 10
-            )
-        }
+        val screenSize = Toolkit.getDefaultToolkit().screenSize
+        loc = Point(
+            Random.nextInt(screenSize.width - window.width - 20) + 10,
+            Random.nextInt(screenSize.height - window.height - 20) + 10
+        )
     } while (xyWithinThreshold(screenLoc, loc))
     wanderLoc = loc
 }
 
 fun xyWithinThreshold(px: Point, py: Point) = abs(px.y - py.y) <= 400 && abs(px.x - py.x) <= 400
+
 fun flipImage(img: BufferedImage): BufferedImage {
     val mirror = BufferedImage(img.width, img.height, BufferedImage.TYPE_INT_ARGB)
     mirror.createGraphics().run {
@@ -136,10 +134,17 @@ fun doAction() {
     }
     val screenSize = Toolkit.getDefaultToolkit().screenSize
     when {
-        loc.x > screenSize.width - window.width -> loc.setLocation(screenSize.width - window.width, loc.y)
-        loc.x < -10 -> loc.setLocation(-10, loc.y)
-        loc.y > screenSize.height - window.height -> loc.setLocation(loc.x, screenSize.height - window.height)
-        loc.y < -35 -> loc.setLocation(loc.x, -35)
+        loc.x > screenSize.width - window.width ->
+            loc.setLocation(screenSize.width - window.width, loc.y)
+
+        loc.x < -10 ->
+            loc.setLocation(-10, loc.y)
+
+        loc.y > screenSize.height - window.height ->
+            loc.setLocation(loc.x, screenSize.height - window.height)
+
+        loc.y < -35 ->
+            loc.setLocation(loc.x, -35)
     }
     window.location = loc
 }
@@ -148,7 +153,7 @@ fun updateAnimation() {
     animationSteps++
     if (animationSteps >= action.delay) {
         when {
-            action == LAYING && frameNum == action.frameRate - 1 -> {
+            action == LAYING && frameNum == action.frame - 1 -> {
                 if ((animationSteps - action.delay) > 40) {
                     animationSteps = 0
                     frameNum = 0
@@ -157,7 +162,7 @@ fun updateAnimation() {
                 }
             }
 
-            action == SITTING && frameNum == action.frameRate - 1 -> {
+            action == SITTING && frameNum == action.frame - 1 -> {
                 changeAction(LICKING)
                 animationSteps = 0
                 frameNum = 0
@@ -169,10 +174,10 @@ fun updateAnimation() {
             }
         }
     }
-    if (frameNum >= action.frameRate) frameNum = 0
+    if (frameNum >= action.frame) frameNum = 0
 }
 
-fun stateOfBubble() {
+fun bubbleState() {
     if (bubbleState != BubbleState.HEART) {
         if (action == SLEEP || action == CURLED) bubbleState = BubbleState.ZZZ
         else if (action != LICKING && action != SITTING) bubbleState = BubbleState.NONE
@@ -183,7 +188,7 @@ fun stateOfBubble() {
         bubbleFrameNum++
         bubbleSteps = 0
     }
-    if (bubbleFrameNum >= bubbleState.frameRate) {
+    if (bubbleFrameNum >= bubbleState.frame) {
         bubbleFrameNum = 0
         if (bubbleState == BubbleState.HEART) bubbleState = BubbleState.NONE
     }
@@ -194,14 +199,12 @@ fun initSystemTray() {
     if (!SystemTray.isSupported()) return
     val trayIconSize = SystemTray.getSystemTray().trayIconSize
     val trayIcon = TrayIcon(
-        ImageIO.read(Kitty.javaClass.classLoader.getResourceAsStream("icon.png"))
+        ImageIO.read(Kitty.javaClass.classLoader.getResourceAsStream("kitty.png"))
             .getScaledInstance(trayIconSize.width, trayIconSize.height, Image.SCALE_SMOOTH),
         "Kitty"
     )
     trayIcon.popupMenu = KittyPopupMenu
-    SwingUtilities.invokeLater {
-        SystemTray.getSystemTray().add(trayIcon)
-    }
+    SystemTray.getSystemTray().add(trayIcon)
 }
 
 fun updateAction() {
@@ -209,17 +212,21 @@ fun updateAction() {
         if (state == State.WANDER) {
             val curPos = window.locationOnScreen
             if (abs(curPos.x - wanderLoc.x) >= 3)
-                if (curPos.x > wanderLoc.x) changeAction(LEFT) else changeAction(RIGHT)
+                if (curPos.x > wanderLoc.x)
+                    changeAction(LEFT) else changeAction(RIGHT)
             else
-                if (curPos.y > wanderLoc.y) changeAction(UP) else changeAction(DOWN)
-            if (wanderLoc.distance(curPos) < 3) state = State.DEFAULT
+                if (curPos.y > wanderLoc.y)
+                    changeAction(UP) else changeAction(DOWN)
+            if (wanderLoc.distance(curPos) < 3)
+                state = State.DEFAULT
         }
         var changed = false
         when {
             action == LEFT -> layingDir = Direction.LEFT
             action == RIGHT -> layingDir = Direction.RIGHT
-            action != CURLED && action != SITTING && action != LICKING && action != RISING && action != SLEEP && action != LAYING && state != State.WANDER ->
+            state != State.WANDER && (action == UP || action == DOWN || action == LEFT || action == RIGHT) ->
                 changed = if (Random.nextInt(3) >= 1) changeAction(LAYING) else changeAction(SITTING)
+
             else -> {}
         }
         if (changed) frameNum = 0

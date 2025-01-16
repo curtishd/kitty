@@ -1,12 +1,12 @@
 package me.cdh
 
-enum class BubbleState(override val delay: Int, override val frameRate: Int) : Animation {
+enum class BubbleState(override val delay: Int, override val frame: Int) : Animation {
     ZZZ(30, 4),
     HEART(50, 4),
     NONE(-1, -1)
 }
 
-enum class Action(override val frameRate: Int, override val delay: Int) : Animation {
+enum class Action(override val frame: Int, override val delay: Int) : Animation {
     UP(4, 10),
     DOWN(4, 10),
     LEFT(4, 10),
