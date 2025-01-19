@@ -3,25 +3,11 @@ package me.cdh
 import me.cdh.Action.*
 import java.awt.Graphics
 import javax.swing.JPanel
-import javax.swing.SwingUtilities
-import kotlin.concurrent.timer
 
 object Kitty : JPanel() {
 
     init {
-        SwingUtilities.invokeLater { initSystemTray() }
         isOpaque = false
-        window.isVisible = true
-        changeAction(CURLED)
-        timer(initialDelay = 10L, period = 10L, action = {
-            updateAction()
-            doAction()
-            updateAnimation()
-            bubbleState()
-            window.repaint()
-        })
-        if (isDayTime()) timer(initialDelay = 30000L, period = 30000L, action = { tryWander() })
-        else timer(initialDelay = 6000L, period = 6000L, action = { tryWander() })
     }
 
     override fun paintComponent(g: Graphics?) {
@@ -46,5 +32,6 @@ object Kitty : JPanel() {
         }
     }
 
+    @Suppress
     private fun readResolve(): Any = Kitty
 }

@@ -14,6 +14,7 @@ import javax.swing.WindowConstants
 import kotlin.enums.EnumEntries
 import kotlin.math.abs
 import kotlin.random.Random
+import kotlin.system.exitProcess
 
 val window = JFrame().apply {
     type = Window.Type.UTILITY
@@ -49,6 +50,7 @@ val window = JFrame().apply {
         }
     })
     background = Color(1.0f, 1.0f, 1.0f, 0.0f)
+    isVisible = true
     add(Kitty)
 }
 val frames = loadImg(entries)
@@ -203,7 +205,11 @@ fun initSystemTray() {
             .getScaledInstance(trayIconSize.width, trayIconSize.height, Image.SCALE_SMOOTH),
         "Kitty"
     )
-    trayIcon.popupMenu = KittyPopupMenu
+    trayIcon.popupMenu = PopupMenu().apply {
+        val exit = MenuItem("Exit")
+        exit.addActionListener { exitProcess(0) }
+        add(exit)
+    }
     SystemTray.getSystemTray().add(trayIcon)
 }
 
