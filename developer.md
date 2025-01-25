@@ -10,7 +10,7 @@
 
 计划实现的功能包括：
 
-
+将资源目录下的资源复制到\classes\java\main目录下
 
 ```cmd
 cd build

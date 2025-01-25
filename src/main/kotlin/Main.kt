@@ -14,6 +14,6 @@ fun main() =
             bubbleState()
             window.repaint()
         })
-        if (!isDayTime()) timer(initialDelay = 30000L, period = 30000L, action = { tryWander() })
+        if (isDayTime()) timer(initialDelay = 30000L, period = 30000L, action = { tryWander() })
         else timer(initialDelay = 6000L, period = 6000L, action = { tryWander() })
     }
