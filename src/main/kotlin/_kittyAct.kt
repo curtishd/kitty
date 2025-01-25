@@ -106,14 +106,13 @@ fun xyWithinThreshold(px: Point, py: Point) = abs(px.y - py.y) <= 400 && abs(px.
 
 fun flipImage(img: BufferedImage): BufferedImage {
     val mirror = BufferedImage(img.width, img.height, BufferedImage.TYPE_INT_ARGB)
-    mirror.createGraphics().run {
-        transform(AffineTransform().apply {
-            concatenate(AffineTransform.getScaleInstance(-1.0, 1.0))
-            concatenate(AffineTransform.getTranslateInstance(-img.width.toDouble(), 0.0))
-        })
-        drawImage(img, 0, 0, null)
-        dispose()
-    }
+    val gTwoD = mirror.createGraphics()
+    val afTransform = AffineTransform()
+    afTransform.concatenate(AffineTransform.getScaleInstance(-1.0, 1.0))
+    afTransform.concatenate(AffineTransform.getTranslateInstance(-img.width.toDouble(), 0.0))
+    gTwoD.transform(afTransform)
+    gTwoD.drawImage(img, 0, 0, null)
+    gTwoD.dispose()
     return mirror
 }
 

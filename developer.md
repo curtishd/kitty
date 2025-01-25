@@ -8,11 +8,11 @@
 - [x] 实现托盘功能
 - [x] 白天猫咪喜爱睡觉，晚上猫咪喜欢游走
 
-计划实现的功能包括但不限于：
+计划实现的功能包括：
 
 
 
 ```cmd
 cd build
-jpackage -t app-image -n kitty -p '.\libs\kotlin-stdlib-2.0.21.jar;.\libs\annotations-13.0.jar;.\classes\java\main' -m me.cdh/me.cdh.MainKt --jlink-options '--compress zip-9 --no-header-files --strip-native-commands --no-man-pages --strip-debug' --java-options '-Xms50m -Xmx80m -XX:+UseZGC' --icon .\res\kitty.ico --resource-dir .\res
+jpackage -t app-image -n kitty -p '.\libs\kotlin-stdlib-2.1.0.jar;.\libs\annotations-13.0.jar;.\classes\java\main' -m me.cdh/me.cdh.MainKt --jlink-options '--compress zip-9 --no-header-files --strip-native-commands --no-man-pages --strip-debug' --java-options '-Xms50m -Xmx80m -XX:+UseZGC' --icon .\resources\main\kitty.ico --resource-dir .\resources\main
 ```
