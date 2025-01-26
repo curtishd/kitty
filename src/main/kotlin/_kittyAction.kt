@@ -16,20 +16,23 @@ import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.system.exitProcess
 
-val frames = loadImg(entries)
-val bubbleFrames = loadImg(BubbleState.entries)
-var frameNum = 0
-var action = SLEEP
-var currFrames: List<BufferedImage>? = null
-var layingDir = Direction.RIGHT
-var state = State.DEFAULT
-var wanderLoc = Point(0, 0)
-var bubbleState = BubbleState.NONE
-var currBubbleFrames: List<BufferedImage>? = null
-var bubbleFrameNum = 0
-var bubbleSteps = 0
-var animationSteps = 0
-var mood: Byte = 50
+val frames = loadImg(entries) // 加载猫的图片
+var frameNum = 0 // 当前动画帧索引
+var action = SLEEP // 当前行为
+var currFrames: List<BufferedImage>? = null // 当前猫动画帧
+var animationSteps = 0 // 猫的动画播放速度
+var state = State.DEFAULT // 猫的行为
+var layingDir = Direction.RIGHT // 趴下的方向
+var wanderLoc = Point(0, 0) // 尝试游走的方向
+var mood = 30 // 心情
+
+val bubbleFrames = loadImg(BubbleState.entries) // 加载气泡图片
+var bubbleState = BubbleState.NONE // 气泡状态
+var currBubbleFrames: List<BufferedImage>? = null // 当前气泡动画状态
+var bubbleFrameNum = 0 // 气泡状态的动画帧索引
+var bubbleSteps = 0 // 气泡动画的播放速度
+
+// -------------------------------------------------------------------------------------
 val window = JFrame().apply {
     type = Window.Type.UTILITY
     defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
@@ -43,9 +46,7 @@ val window = JFrame().apply {
     isResizable = false
     addMouseMotionListener(object : MouseAdapter() {
         override fun mouseDragged(e: MouseEvent?) {
-            setLocation(
-                e!!.locationOnScreen.x - width / 2, e.locationOnScreen.y - height / 2
-            )
+            setLocation(e!!.locationOnScreen.x - width / 2, e.locationOnScreen.y - height / 2)
             if (changeAction(RISING)) frameNum = 0
         }
     })
@@ -58,11 +59,12 @@ val window = JFrame().apply {
         }
 
         override fun mouseClicked(e: MouseEvent?) {
-            mood = (mood + 10).toByte()
-            bubbleState = if (mood > 50)
+            if (mood < 110) mood += 10
+            bubbleState = if (mood > 50) {
                 BubbleState.HEART
-            else
-                BubbleState.NONE
+            } else {
+                BubbleState.DIZZY
+            }
             bubbleFrameNum = 0
         }
     })
@@ -71,6 +73,7 @@ val window = JFrame().apply {
     add(Kitty)
 }
 
+// 加载图片
 fun <T> loadImg(entries: EnumEntries<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation = buildMap {
     val catVarious = when (Random.nextInt(0, 4)) {
         0 -> "calico_cat"
@@ -85,8 +88,7 @@ fun <T> loadImg(entries: EnumEntries<T>): Map<String, List<BufferedImage>> where
         this[action.name] = list
         val folderName = action.name.lowercase()
         for (i in 1..action.frame) {
-            val inp = javaClass.classLoader.getResourceAsStream("$catVarious/$folderName/${folderName}_$i.png")
-            list.add(ImageIO.read(inp))
+            list.add(ImageIO.read(javaClass.classLoader.getResourceAsStream("$catVarious/$folderName/${folderName}_$i.png")))
         }
     }
 }
@@ -182,23 +184,32 @@ fun updateAnimation() {
 }
 
 fun bubbleState() {
-    if (bubbleState != BubbleState.HEART) {
-        if (action == SLEEP || action == CURLED) bubbleState = BubbleState.ZZZ
-        else if (action != LICKING && action != SITTING) bubbleState = BubbleState.NONE
-    }
     bubbleSteps++
-    currBubbleFrames = bubbleFrames.getOrDefault(bubbleState.name, bubbleFrames[BubbleState.HEART.name])!!
+    currBubbleFrames = if (mood > 50) {
+        bubbleFrames.getOrDefault(bubbleState.name, bubbleFrames[BubbleState.HEART.name])
+    } else {
+        bubbleFrames.getOrDefault(bubbleState.name, bubbleFrames[BubbleState.DIZZY.name])
+    }
+    // 控制播放速度
     if (bubbleSteps >= bubbleState.delay) {
         bubbleFrameNum++
         bubbleSteps = 0
     }
+    // 控制心情气泡的持续时间
+    if (action != CURLED && action != LAYING) bubbleState = BubbleState.NONE
     if (bubbleFrameNum >= bubbleState.frame) {
+        when {
+            action == CURLED || action == LAYING -> bubbleState = BubbleState.ZZZ
+            action != LICKING && action != SITTING -> bubbleState = BubbleState.NONE
+        }
         bubbleFrameNum = 0
-        if (bubbleState == BubbleState.HEART) bubbleState = BubbleState.NONE
+        if (bubbleState == BubbleState.HEART || bubbleState == BubbleState.DIZZY) {
+            bubbleState = BubbleState.NONE
+        }
     }
 }
 
-
+// 初始化系统托盘
 fun initSystemTray() {
     if (!SystemTray.isSupported()) return
     val trayIconSize = SystemTray.getSystemTray().trayIconSize
@@ -215,6 +226,7 @@ fun initSystemTray() {
     SystemTray.getSystemTray().add(trayIcon)
 }
 
+// 更新行为
 fun updateAction() {
     if (action != RISING) {
         if (state == State.WANDER) {

@@ -16,7 +16,7 @@ object Kitty : JPanel() {
             cImg = cImg?.let { flipImage(it) }
         g?.drawImage(cImg, 0, 0, 100, 100, null)
         if (bubbleState != BubbleState.NONE) {
-            val currImg = currBubbleFrames?.get(bubbleFrameNum)
+            val currImg = currBubbleFrames!![bubbleFrameNum]
             var x = 30
             var y = 40
             when (action) {
