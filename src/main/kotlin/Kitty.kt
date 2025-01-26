@@ -11,7 +11,6 @@ object Kitty : JPanel() {
     }
 
     override fun paintComponent(g: Graphics?) {
-        super.paintComponent(g)
         var cImg = currFrames?.get(frameNum)
         if ((action == LAYING || action == RISING || action == SLEEP) && layingDir == Direction.LEFT || action == CURLED && layingDir == Direction.RIGHT)
             cImg = cImg?.let { flipImage(it) }

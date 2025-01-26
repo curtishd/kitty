@@ -16,6 +16,20 @@ import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.system.exitProcess
 
+val frames = loadImg(entries)
+val bubbleFrames = loadImg(BubbleState.entries)
+var frameNum = 0
+var action = SLEEP
+var currFrames: List<BufferedImage>? = null
+var layingDir = Direction.RIGHT
+var state = State.DEFAULT
+var wanderLoc = Point(0, 0)
+var bubbleState = BubbleState.NONE
+var currBubbleFrames: List<BufferedImage>? = null
+var bubbleFrameNum = 0
+var bubbleSteps = 0
+var animationSteps = 0
+var mood: Byte = 50
 val window = JFrame().apply {
     type = Window.Type.UTILITY
     defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
@@ -44,7 +58,11 @@ val window = JFrame().apply {
         }
 
         override fun mouseClicked(e: MouseEvent?) {
-            bubbleState = BubbleState.HEART
+            mood = (mood + 10).toByte()
+            bubbleState = if (mood > 50)
+                BubbleState.HEART
+            else
+                BubbleState.NONE
             bubbleFrameNum = 0
         }
     })
@@ -52,19 +70,6 @@ val window = JFrame().apply {
     isVisible = true
     add(Kitty)
 }
-val frames = loadImg(entries)
-val bubbleFrames = loadImg(BubbleState.entries)
-var frameNum = 0
-var action = SLEEP
-var currFrames: List<BufferedImage>? = null
-var layingDir = Direction.RIGHT
-var state = State.DEFAULT
-var wanderLoc = Point(0, 0)
-var bubbleState = BubbleState.NONE
-var currBubbleFrames: List<BufferedImage>? = null
-var bubbleFrameNum = 0
-var bubbleSteps = 0
-var animationSteps = 0
 
 fun <T> loadImg(entries: EnumEntries<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation = buildMap {
     val catVarious = when (Random.nextInt(0, 4)) {
@@ -101,7 +106,7 @@ fun tryWander() {
     wanderLoc = loc
 }
 
-fun xyWithinThreshold(px: Point, py: Point) = abs(px.y - py.y) <= 400 && abs(px.x - py.x) <= 400
+fun xyWithinThreshold(px: Point, py: Point): Boolean = abs(px.y - py.y) <= 400 && abs(px.x - py.x) <= 400
 
 fun flipImage(img: BufferedImage): BufferedImage {
     val mirror = BufferedImage(img.width, img.height, BufferedImage.TYPE_INT_ARGB)
@@ -157,8 +162,7 @@ fun updateAnimation() {
                 if ((animationSteps - action.delay) > 40) {
                     animationSteps = 0
                     frameNum = 0
-                    if (Random.nextBoolean()) changeAction(CURLED)
-                    else changeAction(SLEEP)
+                    if (Random.nextBoolean()) changeAction(CURLED) else changeAction(SLEEP)
                 }
             }
 
@@ -215,14 +219,14 @@ fun updateAction() {
     if (action != RISING) {
         if (state == State.WANDER) {
             val curPos = window.locationOnScreen
-            if (abs(curPos.x - wanderLoc.x) >= 3)
-                if (curPos.x > wanderLoc.x)
-                    changeAction(LEFT) else changeAction(RIGHT)
-            else
-                if (curPos.y > wanderLoc.y)
-                    changeAction(UP) else changeAction(DOWN)
-            if (wanderLoc.distance(curPos) < 3)
-                state = State.DEFAULT
+            when {
+                abs(curPos.x - wanderLoc.x) >= 3 ->
+                    if (curPos.x > wanderLoc.x) changeAction(LEFT) else changeAction(RIGHT)
+
+                else ->
+                    if (curPos.y > wanderLoc.y) changeAction(UP) else changeAction(DOWN)
+            }
+            if (wanderLoc.distance(curPos) < 3) state = State.DEFAULT
         }
         var changed = false
         when {

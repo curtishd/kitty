@@ -1,8 +1,9 @@
 package me.cdh
 
-enum class BubbleState(override val delay: Int, override val frame: Int) : Animation {
-    ZZZ(30, 4),
-    HEART(50, 4),
+enum class BubbleState(override val frame: Int, override val delay: Int) : Animation {
+    ZZZ(4, 30),
+    HEART(4, 50),
+    DIZZY(4, 50),
     NONE(-1, -1)
 }
 
@@ -19,5 +20,6 @@ enum class Action(override val frame: Int, override val delay: Int) : Animation 
     RISING(2, 40),
     SLEEP(1, 10),
 }
+
 enum class State { DEFAULT, WANDER }
 enum class Direction { RIGHT, LEFT }
