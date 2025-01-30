@@ -20,10 +20,9 @@ val window = JFrame().apply {
     type = Window.Type.UTILITY
     defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
     isUndecorated = true
-    Dimension(100, 100).let {
-        preferredSize = it
-        minimumSize = it
-    }
+    val dim = Dimension(100, 100)
+    preferredSize = dim
+    minimumSize = dim
     setLocationRelativeTo(null)
     isAlwaysOnTop = true
     addMouseMotionListener(object : MouseAdapter() {
@@ -36,7 +35,6 @@ val window = JFrame().apply {
     })
     addMouseListener(object : MouseAdapter() {
         override fun mouseReleased(e: MouseEvent?) {
-            super.mouseReleased(e)
             if (action == RISING) {
                 changeAction(LAYING)
                 frameNum = 1
@@ -44,7 +42,6 @@ val window = JFrame().apply {
         }
 
         override fun mouseClicked(e: MouseEvent?) {
-            super.mouseClicked(e)
             bubbleState = BubbleState.HEART
             bubbleFrameNum = 0
         }
@@ -57,12 +54,12 @@ val frames = loadImg(entries)
 val bubbleFrames = loadImg(BubbleState.entries)
 var frameNum = 0
 var action = SLEEP
-var currFrames: List<BufferedImage>? = null
+lateinit var currFrames: List<BufferedImage>
 var layingDir = Direction.RIGHT
 var state = State.DEFAULT
 var wanderLoc = Point(0, 0)
 var bubbleState = BubbleState.NONE
-var currBubbleFrames: List<BufferedImage>? = null
+lateinit var currBubbleFrames: List<BufferedImage>
 var bubbleFrameNum = 0
 var bubbleSteps = 0
 var animationSteps = 0
