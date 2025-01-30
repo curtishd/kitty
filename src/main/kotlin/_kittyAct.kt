@@ -26,7 +26,6 @@ val window = JFrame().apply {
     }
     setLocationRelativeTo(null)
     isAlwaysOnTop = true
-    isResizable = false
     addMouseMotionListener(object : MouseAdapter() {
         override fun mouseDragged(e: MouseEvent?) {
             setLocation(
@@ -37,6 +36,7 @@ val window = JFrame().apply {
     })
     addMouseListener(object : MouseAdapter() {
         override fun mouseReleased(e: MouseEvent?) {
+            super.mouseReleased(e)
             if (action == RISING) {
                 changeAction(LAYING)
                 frameNum = 1
@@ -44,6 +44,7 @@ val window = JFrame().apply {
         }
 
         override fun mouseClicked(e: MouseEvent?) {
+            super.mouseClicked(e)
             bubbleState = BubbleState.HEART
             bubbleFrameNum = 0
         }
