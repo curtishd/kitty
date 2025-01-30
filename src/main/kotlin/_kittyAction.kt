@@ -20,11 +20,13 @@ val window = JFrame().apply {
     type = Window.Type.UTILITY
     defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
     isUndecorated = true
-    val dim = Dimension(100, 100)
-    preferredSize = dim
-    minimumSize = dim
+    Dimension(100, 100).let {
+        preferredSize = it
+        minimumSize = it
+    }
     setLocationRelativeTo(null)
     isAlwaysOnTop = true
+    isResizable = false
     addMouseMotionListener(object : MouseAdapter() {
         override fun mouseDragged(e: MouseEvent?) {
             setLocation(
@@ -54,12 +56,12 @@ val frames = loadImg(entries)
 val bubbleFrames = loadImg(BubbleState.entries)
 var frameNum = 0
 var action = SLEEP
-lateinit var currFrames: List<BufferedImage>
+var currFrames: List<BufferedImage>? = null
 var layingDir = Direction.RIGHT
 var state = State.DEFAULT
 var wanderLoc = Point(0, 0)
 var bubbleState = BubbleState.NONE
-lateinit var currBubbleFrames: List<BufferedImage>
+var currBubbleFrames: List<BufferedImage>? = null
 var bubbleFrameNum = 0
 var bubbleSteps = 0
 var animationSteps = 0
