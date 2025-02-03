@@ -9,9 +9,7 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-
-}
+dependencies {}
 
 tasks.test {
     useJUnitPlatform()

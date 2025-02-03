@@ -11,13 +11,16 @@ object Kitty : JPanel() {
     }
 
     override fun paintComponent(g: Graphics?) {
-        super.paintComponent(g)
-        var cImg = currFrames?.get(frameNum)
-        if ((action == LAYING || action == RISING || action == SLEEP) && layingDir == Direction.LEFT || action == CURLED && layingDir == Direction.RIGHT)
-            cImg = cImg?.let { flipImage(it) }
+        var cImg = currFrames[frameNum]
+        if ((action == LAYING || action == RISING || action == SLEEP)
+            && layingDir == Direction.LEFT
+            || action == CURLED
+            && layingDir == Direction.RIGHT
+        )
+            cImg = flipImage(cImg)
         g?.drawImage(cImg, 0, 0, 100, 100, null)
         if (bubbleState != BubbleState.NONE) {
-            val currImg = currBubbleFrames?.get(bubbleFrameNum)
+            val currImg = currBubbleFrames[bubbleFrameNum]
             var x = 30
             var y = 40
             when (action) {
