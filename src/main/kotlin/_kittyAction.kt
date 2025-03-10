@@ -7,7 +7,7 @@ import java.awt.event.MouseEvent
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.util.*
 import javax.imageio.ImageIO
 import javax.swing.JFrame
 import javax.swing.WindowConstants
@@ -52,10 +52,10 @@ val window = JFrame().apply {
     isVisible = true
     add(Kitty)
 }
-val frames = loadImg(entries)
-val bubbleFrames = loadImg(BubbleState.entries)
+val frames: Map<String, List<BufferedImage>> = Loader.loadImg(entries)
+val bubbleFrames: Map<String, List<BufferedImage>> = Loader.loadImg(BubbleState.entries)
 var frameNum = 0
-var action = SLEEP
+var action: Action = SLEEP
 lateinit var currFrames: List<BufferedImage>
 var layingDir = Direction.RIGHT
 var state = State.DEFAULT
@@ -66,33 +66,38 @@ var bubbleFrameNum = 0
 var bubbleSteps = 0
 var animationSteps = 0
 
-fun <T> loadImg(entries: EnumEntries<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation = buildMap {
-    val catVarious = when (Random.nextInt(0, 4)) {
-        0 -> "calico_cat"
-        1 -> "grey_tabby_cat"
-        2 -> "orange_cat"
-        3 -> "white_cat"
-        else -> throw IllegalArgumentException()
-    }
-    for (action in entries) {
-        if (action.frame <= 0) continue
-        val list = mutableListOf<BufferedImage>()
-        this[action.name] = list
-        val folderName = action.name.lowercase()
-        for (i in 1..action.frame) {
-            val inp = javaClass.classLoader.getResourceAsStream("$catVarious/$folderName/${folderName}_$i.png")
-            list.add(ImageIO.read(inp))
+object Loader{
+    fun <T> loadImg(entries: EnumEntries<T>): Map<String, List<BufferedImage>> where T : Enum<T>, T : Animation {
+        val stateFramesMap = WeakHashMap<String, List<BufferedImage>>()
+        val catVarious = when (Random.nextInt(0, 4)) {
+            0 -> "calico_cat"
+            1 -> "grey_tabby_cat"
+            2 -> "orange_cat"
+            3 -> "white_cat"
+            else -> throw IllegalArgumentException()
         }
+        for (action in entries) {
+            if (action.frame <= 0) continue
+            val list = mutableListOf<BufferedImage>()
+            stateFramesMap[action.name] = list
+            val folderName = action.name.lowercase()
+            for (i in 1..action.frame) {
+                val inp =
+                    javaClass.classLoader.getResourceAsStream("$catVarious/$folderName/${folderName}_$i.png")
+                list.add(ImageIO.read(inp))
+            }
+        }
+        return stateFramesMap
     }
 }
 
 fun tryWander() {
     if (Random.nextBoolean()) return
     state = State.WANDER
-    val screenLoc = window.locationOnScreen
+    val screenLoc: Point = window.locationOnScreen
     var loc: Point
     do {
-        val screenSize = Toolkit.getDefaultToolkit().screenSize
+        val screenSize: Dimension = Toolkit.getDefaultToolkit().screenSize
         loc = Point(
             Random.nextInt(screenSize.width - window.width - 20) + 10,
             Random.nextInt(screenSize.height - window.height - 20) + 10
@@ -181,7 +186,7 @@ fun bubbleState() {
     if (bubbleState != BubbleState.HEART) {
         when {
             action == SLEEP || action == CURLED -> bubbleState = BubbleState.ZZZ
-            action != LICKING && action != SITTING -> bubbleState = BubbleState.NONE
+            action != SITTING -> bubbleState = BubbleState.NONE
         }
     }
     bubbleSteps++
@@ -239,5 +244,4 @@ fun updateAction() {
     }
 }
 
-fun isDayTime(): Boolean =
-    DateTimeFormatter.ofPattern("HH:mm:ss").format(LocalDateTime.now()).substring(0, 2).toInt() in 7..18
+fun isDayTime(): Boolean = LocalDateTime.now().hour in 7..18
